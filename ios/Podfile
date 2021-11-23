@@ -12,6 +12,10 @@ target 'PAHWeighUnit' do
     :hermes_enabled => false
   )
 
+  pod 'react-native-rfid-nfc', :path => '../node_modules/react-native-rfid-nfc-scanner'
+
+  pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
+
   target 'PAHWeighUnitTests' do
     inherit! :complete
     # Pods for testing

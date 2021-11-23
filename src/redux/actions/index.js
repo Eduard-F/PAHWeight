@@ -39,7 +39,7 @@ export const requestRefresh = (token) => {
             return token
         }
         try {
-            const success = await handleRefresh(token)
+            const success = handleRefresh(token)
             return onSuccess(success)
         } catch (error) {
             return onError(error)
@@ -144,7 +144,7 @@ export const SET_GROUPS = 'SET_GROUPS'
 export const SET_BLOCKS = 'SET_BLOCKS'
 export const SET_ZONES = 'SET_ZONES'
 
-export const fetchAreas = (data, token, organisation, type) => {
+export const SyncDatabase = (data, token, organisation, type) => {
     return async dispatch => {
         function onToken(success) {
             dispatch(setToken(success))

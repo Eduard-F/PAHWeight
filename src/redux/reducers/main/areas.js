@@ -14,7 +14,6 @@ const reducer = (state = initialState, action) => {
     AsyncStorage.getAllKeys((err, keys) => {
         keys.forEach(async key => {
             var root = await getStorage(key)
-            console.log(root.main)
         })
     })
     switch (action.type) {

@@ -19,7 +19,6 @@ export const handleAuthorize = async (provider) => {
     try {
         const config = OAUTH_CLIENTS[provider]
         const newAuthState = await authorize(config)
-        console.log(newAuthState)
         configureAxiosHeaders(newAuthState.accessToken)
         return {
             hasLoggedInOnce: true,
