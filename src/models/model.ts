@@ -69,8 +69,7 @@ export const models = {
         ServerDateUTC: 'INTEGER NOT NULL',
     },
     device: {
-        id: 'INTEGER PRIMARY KEY AUTOINCREMENT',
-        name: 'TEXT NOT NULL',
+        serial: 'TEXT PRIMARY KEY',
         ip: 'TEXT NOT NULL',
         port: 'TEXT NOT NULL',
         username: 'TEXT NOT NULL',

@@ -8,6 +8,7 @@ import { WeightScreen } from '../screens/weight';
 import { DropdownListScreen } from '../screens/dropdown_list';
 import { SettingsScreen } from '../screens/settings';
 import { WirelessScreen } from '../screens/wireless_scale';
+import { ScanDeviceScreen } from '../screens/add_device';
 import HomeScreen from '../screens/home';
 
 const Stack = createNativeStackNavigator()
@@ -21,6 +22,7 @@ const HomeStackNavigator = (props) => {
             <Stack.Screen name="Weight" component={WeightScreen} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen name="WirelessScale" component={WirelessScreen} />
+            <Stack.Screen name="AddDevice" component={ScanDeviceScreen} />
         </Stack.Navigator>
     )
 }

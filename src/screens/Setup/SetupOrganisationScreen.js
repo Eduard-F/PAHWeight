@@ -94,7 +94,7 @@ const SetupOrganisationScreen = (props) => {
                                     <ListItem.Chevron />
                                 </ListItem>
                             )}
-                            keyExtractor={item => item.AreaID}
+                            keyExtractor={item => item.id}
                         />
                         <TouchableOpacity
                             style={[styles.button, {}]}

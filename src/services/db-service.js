@@ -10,8 +10,7 @@ export const getDBConnection = async () => {
   return openDatabase({ name: 'weight-data.db', location: 'default' });
 };
 
-export const checkCreateTables = async () => {
-  const db1 = await getDBConnection()
+export const checkCreateTables = async (db) => {
   // create table if not exists
   var query
   for (var table1 of Object.keys(models)) {
@@ -21,7 +20,7 @@ export const checkCreateTables = async () => {
     }
     query = query.slice(0,-2)
     query += `);`
-    await db1.executeSql(query);
+    await db.executeSql(query);
   }
 };
 
@@ -325,11 +324,31 @@ export const getDeviceItems = async (db) => {
 };
 
 export const saveDeviceItems = async (db, deviceItems) => {
-  const insertQuery =
-    `INSERT OR REPLACE INTO device(name, ip, port, username, password) values` +
-    deviceItems.map(i => `('${i.name}', '${i.ip}', '${i.port}', '${i.username}', '${i.password}')`).join(',');
-
-  return db.executeSql(insertQuery);
+  if (deviceItems.length) {
+    console.log('saveDeviceItems')
+    var headers = []
+    for (var i of Object.keys(deviceItems[0])){
+      if (models.device.hasOwnProperty(i)) {
+        headers.push(i)
+      }
+    }
+    var insertQuery = `INSERT OR REPLACE INTO device (${headers}) values `
+    for (var j of deviceItems) {
+      insertQuery += `(`
+      for (var k of headers) {
+        if (models.device[k].substring(0, 7) == 'INTEGER') {
+          insertQuery += `${j[k]}, `
+        } else {
+          insertQuery += `'${j[k]}', `
+        }
+      }
+      insertQuery = insertQuery.slice(0,-2)
+      insertQuery += `), `
+    }
+    insertQuery = insertQuery.slice(0,-2)
+    
+    await db.executeSql(insertQuery);
+  }
 };
 
 export const deleteDeviceItem = async (db, id) => {

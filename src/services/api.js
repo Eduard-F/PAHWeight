@@ -8,13 +8,12 @@ import { getDBConnection, getConfigItems, saveConfigItems, saveEmployeeItems, sa
 
 
 
-export async function SyncDatabase(token, organisation) {
+export async function SyncDatabase(db, token, organisation) {
     try {
         if (new Date(token.accessTokenExpirationDate).getTime() < Date.now()) {
             var success = await handleRefresh(token)
             token = success
         }
-        const db = await getDBConnection();
         var config = await getConfigItems(db);
         if (!config.length) {
             config = await saveConfigItems(db, [{

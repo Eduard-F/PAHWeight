@@ -12,7 +12,7 @@ const SettingsScreen = ({ navigation }) => {
     try {
       const db = await getDBConnection();
       await checkCreateTables();
-      const initValues = [{ name: 'WeighUnit Demo', ip: '10.0.0.5', port: '22000', username: 'RPiHotspot1', password: '1234567890', lastUsed: 0 }];
+      const initValues = [{ serial: 'WeighUnit Demo', ip: '10.0.0.5', port: '22000', username: 'RPiHotspot1', password: '1234567890', lastUsed: 0 }];
       const res = await getDeviceItems(db);
       if (res.length) {
         setDevice_arr(res);
@@ -36,7 +36,7 @@ const SettingsScreen = ({ navigation }) => {
           ip: item.ip,
           port: parseInt(item.port),
         });}
-      }><Text style={styles.button_txt}>Wifi Name: {item.username} || IP: {item.ip} ||  PORT: {item.port}</Text></TouchableOpacity>
+      }><Text style={styles.button_txt}>Serial: {item.serial} || IP: {item.ip} ||  PORT: {item.port}</Text></TouchableOpacity>
     </View>
   );
 

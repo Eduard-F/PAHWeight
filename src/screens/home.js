@@ -1,15 +1,16 @@
 
 import { connect } from 'react-redux';
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {Button, View, Text, FlatList, TouchableOpacity , StyleSheet, Image} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 import { SyncDatabase } from '../services/api'
 import { setToken } from '../redux/actions/index'
-import { getDBConnection, checkCreateTables, getWeightItems, updateWeightItems } from '../services/db-service';
+import { getDBConnection, checkCreateTables, getDeviceItems } from '../services/db-service';
 import { handleAuthorize, handleRefresh, initialAuth } from '../redux/middleware/authService'
 
 const HomeScreen = (props) => {
+    const [data, setData] = useState(false);
     const img = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcMAAAGuCAYAAADs7G1aAAAABGdBTUEAALGPC/xhBQAAACBjSFJN
     AAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QA/wD/AP+gvaeTAACA
     AElEQVR42uydd0AUZ/rHn2d26TADYu/GkkhXVCxAYBc0GmMqWBAWcpd2yeVyd7mWX+6Ml8vlLuXS
@@ -691,15 +692,24 @@ const HomeScreen = (props) => {
     LTAyLTExVDE2OjAzOjIzKzAzOjAw5kMNdwAAACV0RVh0ZGF0ZTptb2RpZnkAMjAyMC0wMi0xMVQx
     NjowMzoyMyswMzowMJcetcsAAAAZdEVYdFNvZnR3YXJlAEFkb2JlIEltYWdlUmVhZHlxyWU8AAAA
     AElFTkSuQmCC`
+
+    const asyncCallback = useCallback(async () => {
+        const db = await getDBConnection();
+        await checkCreateTables(db);
+        var devices = await getDeviceItems(db)
+        setData(devices)
+        SyncDatabase(db, props.token, props.organisation)
+      }, [])
+
     useEffect(() => {
-        checkCreateTables();
-        SyncDatabase(props.token, props.organisation)
+        asyncCallback()
+        props.navigation.addListener('focus', async () => {const db = await getDBConnection();setData(await getDeviceItems(db))})
     },[]);
 
-    const data = [
-        {id: 0, name: 'WeighUnit Demo', ip: '10.0.0.5', port: '22000', username: 'RPiHotspot1', password: '1234567890', lastUsed: 0},
-        {id: 1, name: 'WeighUnit 1', ip: '10.0.0.5', port: '22000', username: 'RPiHotspot1', password: '1234567890', lastUsed: 0},
-    ]
+    // var data = [
+    //     // {serial: 'WeighUnit Demo', ip: '10.0.0.5', port: '22000', username: 'RPiHotspot1', password: '1234567890', lastUsed: 0},
+    //     { "serial": "WeighUnit Demo", "ip": "10.0.0.5", "port": "22000", "username": "RPiHotspot1", "password": "1234567890", "lastUsed": 0 }
+    // ]
 
     renderItem = ({ item }) => (
         <View style={styles.card}>
@@ -718,7 +728,7 @@ const HomeScreen = (props) => {
                     props.navigation.navigate('Weight')
                 }}>
                     <Text style={styles.text}>
-                        {item.name}
+                        {item.serial}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -737,18 +747,19 @@ const HomeScreen = (props) => {
     )
     
     return (
-        <View>
-            {/* <Button
-                title="getWeigh"
-                onPress={async () => {
-                    const db = await getDBConnection()
-                    console.log(await getWeightItems(db))
-                }}
-            /> */}
-            <FlatList
-                data={data}
-                renderItem={renderItem}
-            />
+        <View style={{flex: 1}}>
+            <View style={{flex: 1}}>
+                <FlatList
+                    data={data}
+                    renderItem={renderItem}
+                />
+            </View>
+            <View style={{marginBottom: 10, marginHorizontal: 100}}>
+                <Button
+                    title="Add Device"
+                    onPress={() => {props.navigation.navigate('AddDevice')}}
+                />
+            </View>
         </View>
     );
 };
