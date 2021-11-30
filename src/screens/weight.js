@@ -39,6 +39,7 @@ const WeightScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true)
 
   var weight_temp = []
+  var qr_code_return = false
 
   async function rfid_callback(payload) {
     console.log("id: " + payload.id)
@@ -59,8 +60,11 @@ const WeightScreen = ({ route, navigation }) => {
   }
 
   useEffect(() => {
+    if (route.params?.qr_code) {
+      qr_code_return = route.params.qr_code
+      console.log('qr_code_return: ' + qr_code_return)
+    }
     if (route.params?.child_model) {
-      console.log('child_model: ' + route.params?.child_model)
       if (route.params?.child_model == 'employee') {
         setEmployee([route.params?.child_id, route.params?.child_value])
         setColor('rgb(170, 0, 0)');
@@ -79,8 +83,8 @@ const WeightScreen = ({ route, navigation }) => {
     NFC.addListener('weight', rfid_callback, rfid_error);
     navigation.addListener('blur', () => {NFC.removeListener('weight'); console.log('remove on blur')})
     navigation.addListener('focus', () => {NFC.addListener('weight', rfid_callback, rfid_error); console.log('add on focus')})
-    navigation.addListener('beforeRemove', () => {
-      console.log('removeListeners');
+    navigation.addListener('beforeRemove', (e) => {
+      console.log('beforeRemove');
       // prevent some errors if client was never created
       if (client._destroyed == false) {
         client.destroy();
@@ -149,7 +153,7 @@ const WeightScreen = ({ route, navigation }) => {
     <Item title={item.title} />
   );
 
-  const handleLocationPermission = async () => { // 👈
+  const handleLocationPermission = async () => {
     var granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       {
@@ -185,7 +189,7 @@ const WeightScreen = ({ route, navigation }) => {
   
   function EndWeight(supervisor='') {
     console.log('endWeight')
-    if (field[0]) {
+    if (field[0] || weight_temp.length == 0) {
       weight_temp = []
       for (var k of weight_arr) {
         weight_temp.push({

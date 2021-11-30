@@ -54,6 +54,7 @@ export const models = {
         AssetDescription: 'TEXT NOT NULL',
         AssetType: 'TEXT NOT NULL',
         RFID: 'TEXT NOT NULL',
+        RFIDCode: 'TEXT NOT NULL',
         CreatedDateUTC: 'INTEGER NOT NULL',
         UpdatedDateUTC: 'INTEGER NOT NULL',
         DeletedDateUTC: 'INTEGER NOT NULL',

@@ -1,12 +1,10 @@
 import type, {Node} from 'react';
 import React, { useState, useEffect, useCallback } from 'react';
-import {Text, View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator} from 'react-native';
+import {Text, View, Button, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator} from 'react-native';
 import { ListItem, SearchBar } from 'react-native-elements';
 import NFC from "react-native-rfid-nfc-scanner";
 
 import { getDBConnection, getEmployeeItems, getFieldItems, getAssetItems, saveEmployeeItems, saveFieldItems, saveAssetItems } from '../services/db-service';
-
-// import SearchableFlatList from "../components/searchableList";
 
 
 const DropdownListScreen = ({ route, navigation }) => {
@@ -20,13 +18,27 @@ const DropdownListScreen = ({ route, navigation }) => {
   });
   const [arrayholder, setArrayholder] = useState([]);
 
+
+  React.useLayoutEffect(() => {
+    navigation.setOptions({
+        headerRight: () => (
+            <Button onPress={() => QrCode()} title="QR" />
+        ),
+    });
+}, [navigation]);
+
   function rfid_callback(payload) {
     setMsg(payload.id)
     console.log("id: " + payload.id)
-    console.log("type: " + payload.type)
-    console.log("origin: " + payload.origin)
-    console.log("scanned: " + payload.scanned)
-    console.log("from_device: " + payload.from_device)
+  }
+
+  function QrCode() {
+    navigation.navigate({
+      name: 'QRCode',
+      params: {
+        child_model: model
+      }
+    });
   }
   
   useEffect(() => {
@@ -35,7 +47,11 @@ const DropdownListScreen = ({ route, navigation }) => {
       NFC.initialize();
       NFC.removeAllListeners();
       NFC.addListener('dropdown', rfid_callback, rfid_error);
-      navigation.addListener('beforeRemove', () => {NFC.removeListener('dropdown');})
+      navigation.addListener('blur', () => {NFC.removeListener('dropdown'); console.log('dropdown remove on blur')})
+      navigation.addListener('beforeRemove', (e) => {
+        console.log('dropdown beforeRemove');
+        NFC.removeAllListeners();
+      })
     }
   },[]);
 
@@ -45,7 +61,6 @@ const DropdownListScreen = ({ route, navigation }) => {
     const db = await getDBConnection();
     if (model == 'employee') {
         results = await getEmployeeItems(db);
-        console.log(results)
     } else if (model == 'field') {
         results = await getFieldItems(db);
     } else if (model == 'asset') {

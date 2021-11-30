@@ -192,7 +192,7 @@ export const getEmployeeItems = async (db) => {
 export const searchEmployeeItems = async (db, rfid) => {
   try {
     const employeeItems = [];
-    const results = await db.executeSql(`SELECT EmployeeID AS id, CONCAT(Firstname, ' ', Surname) AS value, RfidCode, Supervisor FROM employee where RfidCode = '${rfid}'`);
+    const results = await db.executeSql(`SELECT EmployeeID AS id, Firstname || ' ' || Surname AS value, RfidCode, Supervisor FROM employee where RfidCode = '${rfid}' AND DeletedDateUTC = 0 AND Termdate = 'null'`);
     results.forEach(result => {
       for (let index = 0; index < result.rows.length; index++) {
         employeeItems.push(result.rows.item(index))
@@ -278,6 +278,22 @@ export const deleteFieldtItem = async (db, id) => {
 export const getAssetItems = async (db) => {
   try {
     return await dbFetchPromise(db, `SELECT AssetID AS id, '(' || AssetNumber || ') ' || AssetDescription AS value FROM asset WHERE DeletedDateUTC = 0`);
+  } catch (error) {
+    console.error(error);
+    throw Error('Failed to get assetItems !!!');
+  }
+};
+
+export const searchAssetItems = async (db, rfid) => {
+  try {
+    const assetItems = [];
+    const results = await db.executeSql(`SELECT AssetID AS id, '(' || AssetNumber || ') ' || AssetDescription AS value, RFIDCode FROM asset WHERE RFIDCode = '${rfid}' AND DeletedDateUTC = 0`);
+    results.forEach(result => {
+      for (let index = 0; index < result.rows.length; index++) {
+        assetItems.push(result.rows.item(index))
+      }
+    });
+    return assetItems;
   } catch (error) {
     console.error(error);
     throw Error('Failed to get assetItems !!!');

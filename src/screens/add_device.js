@@ -33,6 +33,7 @@ const ScanDeviceScreen = ({ route, navigation }) => {
             flashMode={
                 flash ? RNCamera.Constants.FlashMode.torch : RNCamera.Constants.FlashMode.off
             }
+            showMarker={true}
         />
     );
 }
