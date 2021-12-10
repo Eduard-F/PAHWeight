@@ -2,32 +2,10 @@ import type, {Node} from 'react';
 import React, { useState, useEffect, useCallback } from 'react';
 import {Text, View, FlatList, StyleSheet, TouchableOpacity, Button} from 'react-native';
 
-import { getDBConnection, getDeviceItems, saveDeviceItems, deleteDeviceItem, checkCreateTables, deleteTable } from '../services/db-service';
+import { getDBConnection, getDeviceItems, saveDeviceItems, checkCreateTables, deleteTable } from '../services/db-service';
 
-const SettingsScreen = ({ navigation }) => {
-  const [device_arr, setDevice_arr] = useState([])
-
-
-  const loadDataCallback = useCallback(async () => {
-    try {
-      const db = await getDBConnection();
-      await checkCreateTables();
-      const initValues = [{ serial: 'WeighUnit Demo', ip: '10.0.0.5', port: '22000', username: 'RPiHotspot1', password: '1234567890', lastUsed: 0 }];
-      const res = await getDeviceItems(db);
-      if (res.length) {
-        setDevice_arr(res);
-      } else {
-        await saveDeviceItems(db, initValues);
-        setDevice_arr(initValues);
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadDataCallback();
-  }, [loadDataCallback]);
+const SettingsScreen = ({ route, navigation }) => {
+  const [device, setDevice] = useState({})
   
   const renderItem = ({ item }) => (
     <View>

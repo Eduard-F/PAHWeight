@@ -21,11 +21,12 @@ const DropdownListScreen = ({ route, navigation }) => {
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
-        headerRight: () => (
-            <Button onPress={() => QrCode()} title="QR" />
-        ),
+      headerRight: () => (
+          <Button onPress={() => QrCode()} title="QR" />
+      ),
+      title: 'Select ' + model
     });
-}, [navigation]);
+  }, [navigation]);
 
   function rfid_callback(payload) {
     setMsg(payload.id)
@@ -47,9 +48,8 @@ const DropdownListScreen = ({ route, navigation }) => {
       NFC.initialize();
       NFC.removeAllListeners();
       NFC.addListener('dropdown', rfid_callback, rfid_error);
-      navigation.addListener('blur', () => {NFC.removeListener('dropdown'); console.log('dropdown remove on blur')})
+      navigation.addListener('blur', () => {NFC.removeListener('dropdown');})
       navigation.addListener('beforeRemove', (e) => {
-        console.log('dropdown beforeRemove');
         NFC.removeAllListeners();
       })
     }
@@ -164,7 +164,7 @@ var styles = StyleSheet.create({
 });
 
 function rfid_error(payload) {
-  console.log(payload.toString())
+  console.log('rfid_error: ' + payload.toString())
 }
 
 module.exports = { DropdownListScreen };

@@ -38,15 +38,15 @@ export const handleRefresh = async (current) => {
             refreshToken: current.refreshToken
         })
         configureAxiosHeaders(newAuthState.accessToken)
+        console.log(...newAuthState.accessToken)
         return {
             ...current,
             ...newAuthState,
             refreshToken: newAuthState.refreshToken || current.refreshToken
         }
     } catch (error) {
-        console.log(error)
-        Alert.alert('Failed to refresh token', error.message)
-        return current
+        console.log('Failed to refresh token', error.message)
+        return false
     }
 }
 

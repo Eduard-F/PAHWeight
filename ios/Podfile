@@ -18,6 +18,8 @@ target 'PAHWeighUnit' do
 
   pod 'react-native-camera', :path => '../node_modules/react-native-camera'
 
+  pod 'SRSRadialGradient', :path => '../node_modules/react-native-radial-gradient'
+
   target 'PAHWeighUnitTests' do
     inherit! :complete
     # Pods for testing

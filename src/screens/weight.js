@@ -2,13 +2,14 @@ const net = require('net');
 
 import type, {Node} from 'react';
 import React, { useState, useEffect, useCallback } from 'react';
-import {Text, View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, PermissionsAndroid} from 'react-native';
+import {Text, View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, PermissionsAndroid, Button, DrawerLayoutAndroid} from 'react-native';
 import { vw, vh } from 'react-native-expo-viewport-units';
 import NFC from "react-native-rfid-nfc-scanner";
 import WifiManager from "react-native-wifi-reborn";
 import uuid from 'react-native-uuid';
 
-import { getDBConnection, searchEmployeeItems, saveWeightItems } from '../services/db-service';
+import { SyncDatabase } from '../services/api'
+import { getDBConnection, searchEmployeeItems, saveWeightItems, getConfigItems } from '../services/db-service';
 
 var client = new net.Socket();
 client._destroyed = true;
@@ -19,6 +20,8 @@ var options = {
     username: 'RPiHotspot1',
     password: '1234567890'
 }
+var config
+var weight_temp = []
 
 
 const Item = ({ title }) => (
@@ -32,14 +35,19 @@ const WeightScreen = ({ route, navigation }) => {
   const [loading_msg, setLoadingMsg] = useState('');
   const [weight, setWeight] = useState('0');
   const [color, setColor] = useState('rgb(40, 44, 52)')
+  const [serial, setSerial] = useState('');
   const [weight_arr, setWeight_arr] = useState([])
   const [employee, setEmployee] = useState(['',''])
   const [field, setField] = useState(['',''])
   const [asset, setAsset] = useState(['',''])
   const [loading, setLoading] = useState(true)
 
-  var weight_temp = []
-  var qr_code_return = false
+
+  const asyncCallback = useCallback(async () => {
+    const db = await getDBConnection();
+    config = await getConfigItems(db);
+    setSerial(config[0].Serial)
+  });
 
   async function rfid_callback(payload) {
     console.log("id: " + payload.id)
@@ -60,10 +68,6 @@ const WeightScreen = ({ route, navigation }) => {
   }
 
   useEffect(() => {
-    if (route.params?.qr_code) {
-      qr_code_return = route.params.qr_code
-      console.log('qr_code_return: ' + qr_code_return)
-    }
     if (route.params?.child_model) {
       if (route.params?.child_model == 'employee') {
         setEmployee([route.params?.child_id, route.params?.child_value])
@@ -78,13 +82,13 @@ const WeightScreen = ({ route, navigation }) => {
   }, [route.params?.child_value]);
 
   useEffect(() => {
+    asyncCallback()
     NFC.initialize();
     NFC.removeAllListeners();
     NFC.addListener('weight', rfid_callback, rfid_error);
-    navigation.addListener('blur', () => {NFC.removeListener('weight'); console.log('remove on blur')})
-    navigation.addListener('focus', () => {NFC.addListener('weight', rfid_callback, rfid_error); console.log('add on focus')})
+    navigation.addListener('blur', () => {NFC.removeListener('weight');})
+    navigation.addListener('focus', () => {NFC.addListener('weight', rfid_callback, rfid_error);})
     navigation.addListener('beforeRemove', (e) => {
-      console.log('beforeRemove');
       // prevent some errors if client was never created
       if (client._destroyed == false) {
         client.destroy();
@@ -104,26 +108,29 @@ const WeightScreen = ({ route, navigation }) => {
     });
 
     client.on('data', (data) => {
-      var arr = data.toString().split('_')
-      if (arr[0] == 'cmd') {
-        if (arr[1] == "removeWeight") {
-          setColor('rgb(0, 170, 0)')
-          setMsg('Remove Weight');
-          setWeight(arr[2]);
-          weight_temp.push({
-            id: weight_temp.length.toString(),
-            title: arr[2],
-            date: new Date().getTime()
-          })
-          setWeight_arr(weight_temp)
-        } else if (arr[1] == 'addWeight') {
-          setColor('rgb(170, 0, 0)')
-          setMsg('Add Weight');
-        } else {
-          setMsg(arr[1]);
-        }
-      } else if (arr[0] == 'weight')
-        setWeight((parseFloat(arr[1])/1000).toFixed(2));
+      for (var msg of data.toString().split('*').slice(0, -1)) {
+        var arr = msg.toString().split('_')
+        if (arr[0] == 'cmd') {
+          if (arr[1] == "removeWeight") {
+            setColor('rgb(0, 170, 0)')
+            setMsg('Remove Weight');
+            setWeight(arr[2]);
+            weight_temp.push({
+              id: weight_temp.length.toString(),
+              title: arr[2],
+              date: new Date().getTime()
+            })
+            setWeight_arr(weight_temp)
+          } else if (arr[1] == 'addWeight') {
+            setColor('rgb(170, 0, 0)')
+            setMsg('Add Weight');
+          } else {
+            setMsg(arr[1]);
+          }
+        } else if (arr[0] == 'weight')
+          setWeight(arr[1]);
+      }
+      
     });
 
     client.on('error', (error) => {
@@ -136,24 +143,24 @@ const WeightScreen = ({ route, navigation }) => {
         console.log("Your current connected wifi SSID is " + ssid);
         if (ssid != options.username) {
           setLoadingMsg('Connecting to "' + options.username + '" wifi SSID')
-          handleLocationPermission()
+          handleWifiPermission()
         } else {
           client.connect(options);
         }
       },
       () => {
-        setLoadingMsg('Unable to check wifi, make sure it is turned on')
         console.log("Cannot get current SSID!");
+        handleWifiPermission()
       }
     );
   },[]);
 
 
   const renderItem = ({ item }) => (
-    <Item title={item.title} />
+    <Item title={(parseFloat(item.title)/1000).toFixed(2)} />
   );
 
-  const handleLocationPermission = async () => {
+  const handleWifiPermission = async () => {
     var granted = await PermissionsAndroid.request(
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
       {
@@ -176,7 +183,7 @@ const WeightScreen = ({ route, navigation }) => {
         (error) => {
           console.log(error);
           console.log("Connection failed!");
-          setLoadingMsg('Connection failed! Make sure wifi scale is turned on.')
+          setLoadingMsg('Connection failed! Make sure wifi is enabled and scale is turned on.')
           setTimeout(function(){navigation.goBack();}, 3000)
         }
       );
@@ -187,19 +194,20 @@ const WeightScreen = ({ route, navigation }) => {
   };
 
   
-  function EndWeight(supervisor='') {
+  function EndWeight(supervisor=null) {
     console.log('endWeight')
-    if (field[0] || weight_temp.length == 0) {
+    if (field[0] || weight_arr.length == 0) {
       weight_temp = []
       for (var k of weight_arr) {
         weight_temp.push({
           TransactionID: uuid.v4(),
           Weight: k.title,
           EmployeeID: employee[0],
-          SupervisorID: supervisor,
+          SupervisorID: supervisor ? supervisor : employee[0],
           FieldID: field[0],
           VarietyID: '',
           AssetID: asset[0],
+          SerialNumber: serial,
           CreatedDateUTC: k.date,
           UpdatedDateUTC: 0,
           DeletedDateUTC: 0,
@@ -207,6 +215,7 @@ const WeightScreen = ({ route, navigation }) => {
         })
       }
       saveWeightItems(weight_temp)
+      weight_temp = []
       setWeight_arr([])
       setEmployee(['',''])
       setField(['',''])
@@ -214,8 +223,12 @@ const WeightScreen = ({ route, navigation }) => {
       setColor('rgb(40, 44, 52)');
       setWeight('0')
       setMsg('')
-      weight_temp = []
-      client.write('endWeight');
+      client.write('endWeight*');
+      const promise1 = getDBConnection()
+      promise1.then( res => {
+          SyncDatabase(res, config[0].token, config[0].organisation)
+      })
+      
     } else {
       navigation.navigate('DropdownList', {
         model: 'field',
@@ -274,7 +287,7 @@ const WeightScreen = ({ route, navigation }) => {
               <Text style={styles.text}>{msg}</Text>
             </View>
             <View>
-              <TouchableOpacity style={[styles.button, {margin: 20}]}  onPress={EndWeight}><Text style={styles.button_txt}>End</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.button, {margin: 20}]}  onPress={() => EndWeight()}><Text style={styles.button_txt}>End</Text></TouchableOpacity>
             </View>
           </View>
           <View style={[{width:200}, styles.inset]}>
@@ -323,21 +336,8 @@ var styles = StyleSheet.create({
   }
 });
 
-function disconnect() {
-    client.destroy();
-}
-
-function Callibrate(cal_weight='1000') {
-  console.log('calibrate_'+cal_weight.toString())
-  client.write('calibrate_'+'1000');
-}
-
-function Tare() {
-  client.write('tare');
-}
-
 function StartWeight() {
-  client.write('weight');
+  client.write('weight*');
 }
 
 function rfid_error(payload) {

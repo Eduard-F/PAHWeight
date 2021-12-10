@@ -102,24 +102,25 @@ class SocketHandler(Thread):
         isConnected = False
         debug("SocketHandler terminated")
 
-    def executeCommand(self, cmd):
-        debug("Calling executeCommand() with  cmd: " + cmd)
-        cmd = cmd.split('_')
-        if cmd[0] == "tare":
-            self.calibrateTare()
-            self.conn.sendall(("cmd_tareDone").encode())
-        elif cmd[0] == "calibrate":
-            self.calibrateWeight(int(cmd[1]))
-        elif cmd[0] == "weight":
-            self.scale_start = True
-            self.start_weighing()
-        elif cmd[0] == "endWeight":
-            self.scale_start = False
+    def executeCommand(self, msg):
+        debug("Calling executeCommand() with  msg: " + msg)
+        for cmd in msg.split('*'):
+            cmd = cmd.split('_')
+            if cmd[0] == "tare":
+                self.calibrateTare()
+                self.conn.sendall(("cmd_tareDone*").encode())
+            elif cmd[0] == "calibrate":
+                self.calibrateWeight(int(cmd[1]))
+            elif cmd[0] == "weight":
+                self.scale_start = True
+                self.start_weighing()
+            elif cmd[0] == "endWeight":
+                self.scale_start = False
 
     def calibrateTare(self):
             self.hx.reset()
             self.hx.tare_A()
-            self.conn.sendall(("cmd_tareDone").encode())
+            self.conn.sendall(("cmd_tareDone*").encode())
 
     def calibrateWeight(self, cal_weight):
         boolean = True
@@ -128,7 +129,7 @@ class SocketHandler(Thread):
             try:
                 self.hx.set_reference_unit_A(1)
                 val = self.hx.get_weight_A(5)
-                self.conn.sendall(('weight_' + str(round(val))).encode())
+                self.conn.sendall(('weight_' + str(round(val))+'*').encode())
                 weight_arr.append(val)
                 self.hx.power_down()
                 self.hx.power_up()
@@ -136,7 +137,7 @@ class SocketHandler(Thread):
                     if statistics.pvariance(weight_arr) < 2000 and val > 500:
                         boolean = False
                         self.hx.REFERENCE_UNIT = statistics.mean(weight_arr) / (cal_weight)
-                        self.conn.sendall(("cmd_calDone").encode())
+                        self.conn.sendall(("cmd_calDone*").encode())
                         self.config.ReferenceUnitA = self.hx.REFERENCE_UNIT
                         self.config.OffsetA = self.hx.OFFSET
                         s.commit()
@@ -160,7 +161,7 @@ class SocketHandler(Thread):
                 val = self.hx.get_weight_A(5)
                 # only update the UI if the user is busy weighing
                 if update_label:
-                    self.conn.sendall(('weight_' + str(max(0, round(val, 2)))).encode())
+                    self.conn.sendall(('weight_' + str(max(0, round(val, 2)))+'*').encode())
                 
                 print('weight_' + str(max(0, round(val, 2))))
                 weight_arr.append(val)
@@ -170,11 +171,13 @@ class SocketHandler(Thread):
                     mean = statistics.mean(weight_arr)  # get average of the last 5 values
                     if statistics.pvariance(weight_arr) < 10 and val > min_weight and update_label:
                         update_label = False
-                        self.conn.sendall(("cmd_removeWeight_" + str(round(mean,2))).encode())
+                        print("cmd_removeWeight_" + str(round(mean,2)))
+                        self.conn.sendall(("cmd_removeWeight_" + str(round(mean,2))+'*').encode())
 
                     # check to see when weight is removed and reset loop
                     elif mean < 10 and val < min_weight and update_label == False:
-                        self.conn.sendall(("cmd_addWeight").encode())
+                        print("cmd_addWeight")
+                        self.conn.sendall(("cmd_addWeight*").encode())
                         update_label = True
 
                     del weight_arr[0]

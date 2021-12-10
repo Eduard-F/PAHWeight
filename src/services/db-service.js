@@ -57,8 +57,7 @@ export const getLastSync = async (db) => {
 
 export const getConfigItems = async (db) => {
   try {
-    // return await dbFetchPromise(db, `SELECT * FROM config`);
-    return '123'
+    return await dbFetchPromise(db, `SELECT * FROM config`);
   } catch (error) {
     console.error(error);
     throw Error('Failed to get configItems !!!');
@@ -77,7 +76,11 @@ export const saveConfigItems = async (db, configItems) => {
     for (var j of configItems) {
       insertQuery += `(`
       for (var k of headers) {
-        insertQuery += `${j[k]}, `
+        if (models.config[k].substring(0, 7) == 'INTEGER') {
+          insertQuery += `${j[k]}, `
+        } else {
+          insertQuery += `'${j[k]}', `
+        }
       }
       insertQuery = insertQuery.slice(0,-2)
       insertQuery += `), `
@@ -341,7 +344,6 @@ export const getDeviceItems = async (db) => {
 
 export const saveDeviceItems = async (db, deviceItems) => {
   if (deviceItems.length) {
-    console.log('saveDeviceItems')
     var headers = []
     for (var i of Object.keys(deviceItems[0])){
       if (models.device.hasOwnProperty(i)) {
@@ -367,8 +369,8 @@ export const saveDeviceItems = async (db, deviceItems) => {
   }
 };
 
-export const deleteDeviceItem = async (db, id) => {
-  const deleteQuery = `DELETE from device where id = ${id}`;
+export const deleteDeviceItem = async (db, serial) => {
+  const deleteQuery = `DELETE from device where serial = '${serial}'`;
   await db.executeSql(deleteQuery);
 };
 

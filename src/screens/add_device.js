@@ -30,10 +30,15 @@ const ScanDeviceScreen = ({ route, navigation }) => {
     return (
         <QRCodeScanner
             onRead={onSuccess}
+            containerStyle={{height:100}}
             flashMode={
                 flash ? RNCamera.Constants.FlashMode.torch : RNCamera.Constants.FlashMode.off
             }
             showMarker={true}
+            containerStyle={{flex: 1,justifyContent: 'center',alignItems: 'center',}}
+            topViewStyle={{flex: 0}}
+            bottomViewStyle={{flex: 0}}
+            cameraStyle={{overflow: 'hidden'}}
         />
     );
 }

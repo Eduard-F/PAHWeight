@@ -1,5 +1,4 @@
 import { handleAuthorize, handleRefresh, initialAuth } from '../middleware/authService'
-import { getAreas } from '../middleware/cropService'
 import { getOrganisations } from '../middleware/orgService'
 
 // Auth action types
@@ -135,106 +134,6 @@ export const setOrganisation = (content) => {
 export const clearOrganisation = () => {
     return {
         type: 'CLEAR_ORGANISATION'
-    }
-}
-
-// API actions types
-export const SET_FIELDS = 'SET_FIELDS'
-export const SET_GROUPS = 'SET_GROUPS'
-export const SET_BLOCKS = 'SET_BLOCKS'
-export const SET_ZONES = 'SET_ZONES'
-
-export const SyncDatabase = (data, token, organisation, type) => {
-    return async dispatch => {
-        function onToken(success) {
-            dispatch(setToken(success))
-            return success
-        }
-        function onSuccess(success) {
-            switch (type) {
-                case SET_FIELDS:
-                    {
-                        dispatch(setFields(success))
-                        return success
-                    }
-                case SET_GROUPS:
-                    {
-                        dispatch(setGroups(success))
-                        return success
-                    }
-                case SET_BLOCKS:
-                    {
-                        dispatch(setBlocks(success))
-                        return success
-                    }
-                case SET_ZONES:
-                    {
-                        dispatch(setZones(success))
-                        return success
-                    }
-                default:
-                    return success
-            }
-        }
-        function onError(error) {
-            console.log(error)
-            return data
-        }
-        try {
-            var success = data
-            if (new Date(token.accessTokenExpirationDate).getTime() < Date.now())
-                token = onToken(await handleRefresh(token))
-            switch (type) {
-                case SET_FIELDS:
-                    {
-                        success = await getAreas(data, token, organisation, type)
-                        return onSuccess(success)
-                    }
-                case SET_GROUPS:
-                    {
-                        success = await getAreas(data, token, organisation, type)
-                        return onSuccess(success)
-                    }
-                case SET_BLOCKS:
-                    {
-                        success = await getAreas(data, token, organisation, type)
-                        return onSuccess(success)
-                    }
-                case SET_ZONES:
-                    {
-                        success = await getAreas(data, token, organisation, type)
-                        return onSuccess(success)
-                    }
-                default:
-                    return onSuccess(data)
-            }
-        } catch (error) {
-            return onError(error)
-        }
-    }
-}
-export const setFields = (data) => {
-    return {
-        type: SET_FIELDS,
-        content: data
-    }
-}
-export const setGroups = (data) => {
-    return {
-        type: SET_GROUPS,
-        content: data
-    }
-}
-export const setBlocks = (data) => {
-    return {
-        type: SET_BLOCKS,
-        content: data
-    }
-}
-export const setZones = (data) => {
-    return {
-        type: SET_ZONES,
-        content: data
     }
 }
 

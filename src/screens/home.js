@@ -1,16 +1,26 @@
 
 import { connect } from 'react-redux';
-import React, { useState, useEffect, useCallback } from 'react';
-import {Button, View, Text, FlatList, TouchableOpacity , StyleSheet, Image} from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {Button, View, Text, FlatList, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, Image, ActivityIndicator, Modal} from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { useNavigation } from '@react-navigation/native';
 
 import { SyncDatabase } from '../services/api'
-import { setToken } from '../redux/actions/index'
-import { getDBConnection, checkCreateTables, getDeviceItems } from '../services/db-service';
-import { handleAuthorize, handleRefresh, initialAuth } from '../redux/middleware/authService'
+import { getDBConnection, checkCreateTables, getDeviceItems, getConfigItems, saveConfigItems } from '../services/db-service';
+import styles from "../styles";
 
 const HomeScreen = (props) => {
     const [data, setData] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [syncError, setSyncError] = useState(true);
+    const [loading_msg, setLoadingMsg] = useState('');
+    const [modalVisible, setModalVisible] = useState(false);
+    const [last_sync, setLastSync] = useState()
+
+    var config
+
+    const navigation = useNavigation();
+
     const img = `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAcMAAAGuCAYAAADs7G1aAAAABGdBTUEAALGPC/xhBQAAACBjSFJN
     AAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QA/wD/AP+gvaeTAACA
     AElEQVR42uydd0AUZ/rHn2d26TADYu/GkkhXVCxAYBc0GmMqWBAWcpd2yeVyd7mWX+6Ml8vlLuXS
@@ -694,49 +704,109 @@ const HomeScreen = (props) => {
     AElFTkSuQmCC`
 
     const asyncCallback = useCallback(async () => {
+        setLoadingMsg('Fetching data')
         const db = await getDBConnection();
         await checkCreateTables(db);
+        config = await getConfigItems(db);
+        if (config.length == 0) {
+            setLoadingMsg('Syncing first time data with server...')
+            console.log('Syncing first time data with server...')
+            config = await saveConfigItems(db, [{
+                'ConfigID': '1',
+                'LastSync': 0,
+                'LastServerSync': 0,
+                'Token': props.token,
+                'Organisation': props.organisation,
+                'Serial': 'testing',
+                'CreatedDateUTC': 0,
+                'UpdatedDateUTC': 0,
+                'DeletedDateUTC': 0,
+                'ServerDateUTC': 0,
+            }])
+            const sync_error = await SyncDatabase(db, props.token, props.organisation)
+            setSyncError(sync_error)
+        } else {
+            const promise = SyncDatabase(db, props.token, props.organisation)
+            promise.then( res => {
+                setSyncError(syncError => res)
+            })
+        }
+        if ((new Date() - new Date(config[0].LastSync)) / 60000 < 30) {
+            setSyncError(false)
+        }
         var devices = await getDeviceItems(db)
         setData(devices)
-        SyncDatabase(db, props.token, props.organisation)
+        setLoading(false)
       }, [])
 
     useEffect(() => {
         asyncCallback()
-        props.navigation.addListener('focus', async () => {const db = await getDBConnection();setData(await getDeviceItems(db))})
+        // this causes errors
+        props.navigation.addListener('focus', async () => {asyncCallback()})
     },[]);
 
-    // var data = [
-    //     // {serial: 'WeighUnit Demo', ip: '10.0.0.5', port: '22000', username: 'RPiHotspot1', password: '1234567890', lastUsed: 0},
-    //     { "serial": "WeighUnit Demo", "ip": "10.0.0.5", "port": "22000", "username": "RPiHotspot1", "password": "1234567890", "lastUsed": 0 }
-    // ]
+    
+    React.useLayoutEffect(() => {
+        navigation.setOptions({
+            headerRight: () => (
+                <TouchableOpacity onPress={() => {openModal()}}>
+                    <Icon style={[stylez.icon, {color: syncError ? 'red' : 'green'}]}
+                        name="refresh"
+                        size={15}
+                    />
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation, syncError]);
+
+    function openModal() {
+        const promise1 = getDBConnection()
+        promise1.then( res => {
+            const promise2 = getConfigItems(res);
+            promise2.then( res1 => setLastSync(new Date(res1[0].LastSync).toString()) )
+        })
+        setModalVisible(true)
+    }
+
+    async function syncDB() {
+        setLoading(true)
+        const db = await getDBConnection();
+        const sync_error = await SyncDatabase(db, props.token, props.organisation)
+        setSyncError(sync_error)
+        if (!sync_error) {
+            config = await getConfigItems(db);
+            setLastSync(new Date(config[0].LastSync).toString())
+            setModalVisible(false)
+        }
+        setLoading(false)
+    }
 
     renderItem = ({ item }) => (
-        <View style={styles.card}>
+        <View style={stylez.card}>
             <View>
                 <TouchableOpacity style={{flex:1}} onPress={() => {
-                    props.navigation.navigate('Weight')
+                    props.navigation.navigate('Weight', {'item': item})
                 }}>
                     <Image
-                        style={styles.image}
+                        style={stylez.image}
                         source={{uri: img}}
                     />
                 </TouchableOpacity>
             </View>
-            <View style={styles.content}>
+            <View style={stylez.content}>
                 <TouchableOpacity style={{flex:1}} onPress={() => {
-                    props.navigation.navigate('Weight')
+                    props.navigation.navigate('Weight', {'item': item})
                 }}>
-                    <Text style={styles.text}>
+                    <Text style={stylez.text}>
                         {item.serial}
                     </Text>
                 </TouchableOpacity>
             </View>
             <View>
                 <TouchableOpacity onPress={() => {
-                    props.navigation.navigate('Settings')
+                    props.navigation.navigate('ScaleInfo', {'item': item})
                 }}>
-                    <Icon style={styles.icon}
+                    <Icon style={stylez.icon}
                         name="gear"
                         size={15}
                         color="white"
@@ -746,26 +816,61 @@ const HomeScreen = (props) => {
         </View>
     )
     
-    return (
-        <View style={{flex: 1}}>
+    if (loading) {
+        return (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="large" />
+                <Text>{loading_msg}</Text>
+            </View>
+        );
+    } else {
+        return (
             <View style={{flex: 1}}>
-                <FlatList
-                    data={data}
-                    renderItem={renderItem}
-                />
+                <Modal
+                    animationType="fade"
+                    transparent={true}
+                    visible={modalVisible}
+                    onRequestClose={() => {
+                    Alert.alert("Modal has been closed.");
+                    setModalVisible(!modalVisible);
+                    }}
+                >
+                    <TouchableOpacity style={{flex:1}} onPress={() => {setModalVisible(!modalVisible)}}>
+                        <View style={{flex: 1,justifyContent: "center",alignItems: "center", backgroundColor: 'rgba(0,0,0,0.4)'}}>
+                            <TouchableWithoutFeedback>
+                            <View style={styles.modalView}>
+                                <View>
+                                    <Text style={{fontWeight: 'bold', fontSize: 25, color: '#424242'}}>Synchronize</Text>
+                                </View>
+                                <View style={{alignItems: 'flex-start'}}>
+                                    <Text style={{fontWeight: 'bold', color: '#424242'}}>Last Sync:</Text>
+                                    <Text>{last_sync}</Text>
+                                </View>
+                                <Button title="Sync now" onPress={async () => await syncDB()}/>
+                            </View>
+                            </TouchableWithoutFeedback>
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
+                    <View style={{flex: 1}}>
+                        <FlatList
+                            data={data}
+                            renderItem={renderItem}
+                        />
+                    </View>
+                    <View style={{marginBottom: 10, marginHorizontal: 100}}>
+                        <Button
+                            title="Add Device"
+                            onPress={() => {props.navigation.navigate('AddDevice')}}
+                        />
+                    </View>
             </View>
-            <View style={{marginBottom: 10, marginHorizontal: 100}}>
-                <Button
-                    title="Add Device"
-                    onPress={() => {props.navigation.navigate('AddDevice')}}
-                />
-            </View>
-        </View>
-    );
+        );
+    }
 };
 
 
-var styles = StyleSheet.create({
+var stylez = StyleSheet.create({
     card: {
         flex: 1,
         flexDirection: 'row',
