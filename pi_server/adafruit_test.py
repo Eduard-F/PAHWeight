@@ -1,56 +1,29 @@
-# Simple demo of reading each analog input from the ADS1x15 and printing it to
-# the screen.
-# Author: Tony DiCola
-# License: Public Domain
 import time
+import board
+import busio
+import adafruit_ads1x15.ads1015 as ADS
+from adafruit_ads1x15.analog_in import AnalogIn
+from w1thermsensor import W1ThermSensor, AsyncW1ThermSensor
+sensor = W1ThermSensor()
+#sensor = AsyncW1ThermSensor()
 
-# Import the ADS1x15 module.
-import Adafruit_ADS1x15
+# Create the I2C bus
+i2c = busio.I2C(board.SCL, board.SDA)
+
+# Create the ADC object using the I2C bus
+ads = ADS.ADS1015(i2c)
+
+# Create single-ended input on channel 0
+# Create differential input between channel 0 and 1
+#chan = AnalogIn(ads, ADS.P0, ADS.P1)
+
+chan = AnalogIn(ads, ADS.P0)
+chan1 = AnalogIn(ads, ADS.P1)
 
 
-# Create an ADS1115 ADC (16-bit) instance.
-#adc = Adafruit_ADS1x15.ADS1115()
+print("{:>5}\t{:>5}\t{:>5}".format('ph', 'air C', 'water C'))
 
-# Or create an ADS1015 ADC (12-bit) instance.
-adc = Adafruit_ADS1x15.ADS1015()
-
-# Note you can change the I2C address from its default (0x48), and/or the I2C
-# bus by passing in these optional parameters:
-#adc = Adafruit_ADS1x15.ADS1015(address=0x49, busnum=1)
-
-# Choose a gain of 1 for reading voltages from 0 to 4.09V.
-# Or pick a different gain to change the range of voltages that are read:
-#  - 2/3 = +/-6.144V
-#  -   1 = +/-4.096V
-#  -   2 = +/-2.048V
-#  -   4 = +/-1.024V
-#  -   8 = +/-0.512V
-#  -  16 = +/-0.256V
-# See table 3 in the ADS1015/ADS1115 datasheet for more info on gain.
-GAIN = 1
-
-print('Reading ADS1x15 values, press Ctrl-C to quit...')
-# Print nice channel column headers.
-print('-' * 37)
-# Main loop.
 while True:
-    # Read all the ADC channel values in a list.
-    values = [0]*3
-    # Read the specified ADC channel using the previously set gain value.
-    values[0] = adc.read_adc(0, gain=2/3)
-    values[1] = adc.read_adc(1, gain=4)
-    values[2] = adc.read_adc(2, gain=1)
-    # Note you can also pass in an optional data_rate parameter that controls
-    # the ADC conversion time (in samples/second). Each chip has a different
-    # set of allowed data rate values, see datasheet Table 9 config register
-    # DR bit values.
-    #values[i] = adc.read_adc(i, gain=GAIN, data_rate=128)
-    # Each value will be a 12 or 16 bit signed integer value depending on the
-    # ADC (ADS1015 = 12-bit, ADS1115 = 16-bit).
-    # Print the ADC values.
-    print(str(values[0]) + ' ' + str(values[1]))
-    print('ph: ' + str(values[0] * 5 / 1708) + 'Volts temp: ' + str(values[1] / 4096 * 1.024))
-    #print(str(values[0] / 4096))
-    #print(str(values[2]))
-    # Pause for half a second.
-    time.sleep(0.5)
+    temperature = sensor.get_temperature()
+    print("{:>5.3f}\t{:>5.1f}\t{:>5}".format(chan.voltage/5*14, (chan1.voltage*100-32)*5/9, temperature))
+    #time.sleep(0.5)

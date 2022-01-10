@@ -2,8 +2,9 @@ const net = require('net');
 
 import type, {Node} from 'react';
 import React, { useState, useEffect, useCallback } from 'react';
-import {Text, View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, PermissionsAndroid, Button, DrawerLayoutAndroid} from 'react-native';
+import {Text, View, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, PermissionsAndroid, Button} from 'react-native';
 import { vw, vh } from 'react-native-expo-viewport-units';
+import Icon from 'react-native-vector-icons/FontAwesome';
 import NFC from "react-native-rfid-nfc-scanner";
 import WifiManager from "react-native-wifi-reborn";
 import uuid from 'react-native-uuid';
@@ -23,12 +24,6 @@ var options = {
 var config
 var weight_temp = []
 
-
-const Item = ({ title }) => (
-  <View style={styles.item}>
-    <Text style={styles.text}>{title} kg</Text>
-  </View>
-);
 
 const WeightScreen = ({ route, navigation }) => {
   const [msg, setMsg] = useState('');
@@ -94,6 +89,7 @@ const WeightScreen = ({ route, navigation }) => {
         client.destroy();
       }
       NFC.removeAllListeners();
+      weight_temp = [] // clear weights on back button
     })
     setColor('rgb(40, 44, 52)') // default grey colour
     
@@ -155,10 +151,12 @@ const WeightScreen = ({ route, navigation }) => {
     );
   },[]);
 
-
-  const renderItem = ({ item }) => (
-    <Item title={(parseFloat(item.title)/1000).toFixed(2)} />
-  );
+  function deleteWeight(item) {
+    weight_temp = Object.assign([], weight_arr)
+    const idx = weight_temp.findIndex(x => x.id === item.id)
+    weight_temp.splice(idx,1)
+    setWeight_arr(weight_temp)
+  }
 
   const handleWifiPermission = async () => {
     var granted = await PermissionsAndroid.request(
@@ -293,7 +291,19 @@ const WeightScreen = ({ route, navigation }) => {
           <View style={[{width:200}, styles.inset]}>
             <FlatList
               data={weight_arr}
-              renderItem={renderItem}
+              // renderItem={renderItem}
+              renderItem={({item}) => (
+                <View style={styles.item}>
+                  <Text style={styles.text}>{(parseFloat(item.title)/1000).toFixed(2)} kg 
+                    <TouchableOpacity style={{marginLeft: 5, paddingLeft: 5}} onPress={() => deleteWeight(item)}>
+                      <Icon style={{color: 'white',marginLeft: 5, paddingLeft: 5}}
+                          name="trash"
+                          size={15}
+                      />
+                    </TouchableOpacity>
+                  </Text>
+                </View>
+              )}
               keyExtractor={item => item.id}
             />
           </View>
